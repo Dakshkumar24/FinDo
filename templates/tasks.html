@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Your Tasks</title>
+</head>
+<body>
+  <h1>Your Tasks</h1>
+  <input type="text" id="taskInput" placeholder="Enter a task">
+  <button onclick="addTask()">Add</button>
+  <ul id="taskList"></ul>
+  <button onclick="logout()">Logout</button>
+
+  <script>
+    function loadTasks() {
+      fetch('/get-tasks')
+        .then(res => res.json())
+        .then(tasks => {
+          const list = document.getElementById('taskList');
+          list.innerHTML = '';
+          tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.innerHTML = `${task.title} <button onclick="deleteTask(${task.id})">Delete</button>`;
+            list.appendChild(li);
+          });
+        });
+    }
+
+    function addTask() {
+      const title = document.getElementById('taskInput').value;
+      fetch('/add-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      })
+      .then(() => {
+        document.getElementById('taskInput').value = '';
+        loadTasks();
+      });
+    }
+
+    function deleteTask(id) {
+      fetch(`/delete-task/${id}`, {
+        method: 'DELETE'
+      }).then(loadTasks);
+    }
+
+    function logout() {
+      fetch('/logout').then(() => {
+        window.location.href = '/';
+      });
+    }
+
+    window.onload = loadTasks;
+  </script>
+</body>
+</html>

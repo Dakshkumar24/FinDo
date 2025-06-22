@@ -1,99 +1,150 @@
-from flask import Flask, request, jsonify, render_template
-from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS
-import os
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import csv
+import os
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = 'your_secret_key'  # Change this for production!
 
-db = SQLAlchemy(app)
-CORS(app)
+USERS_CSV = 'users.csv'
+TASKS_CSV = 'tasks.csv'
 
-# Task Model
-class Task(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(150), nullable=False)
-    completed = db.Column(db.Boolean, default=False)
+# Ensure CSV files exist with headers
+if not os.path.exists(USERS_CSV):
+    with open(USERS_CSV, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['username', 'password'])
 
-# Initialize DB
-with app.app_context():
-    db.create_all()
+if not os.path.exists(TASKS_CSV):
+    with open(TASKS_CSV, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['username', 'task', 'completed'])
 
-# Serve base HTML
+def user_exists(username):
+    with open(USERS_CSV, newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row['username'] == username:
+                return True
+    return False
+
+def add_user(username, password):
+    hashed = generate_password_hash(password)
+    with open(USERS_CSV, 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([username, hashed])
+
+def verify_user(username, password):
+    with open(USERS_CSV, newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row['username'] == username and check_password_hash(row['password'], password):
+                return True
+    return False
+
+def get_tasks(username):
+    tasks = []
+    with open(TASKS_CSV, newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row['username'] == username:
+                tasks.append({'task': row['task'], 'completed': row['completed'] == 'True'})
+    return tasks
+
+def add_task(username, task):
+    with open(TASKS_CSV, 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow([username, task, False])
+
+def update_tasks(username, tasks):
+    all_tasks = []
+    with open(TASKS_CSV, newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row['username'] == username:
+                continue
+            all_tasks.append(row)
+    for t in tasks:
+        all_tasks.append({'username': username, 'task': t['task'], 'completed': str(t['completed'])})
+    with open(TASKS_CSV, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=['username', 'task', 'completed'])
+        writer.writeheader()
+        for row in all_tasks:
+            writer.writerow(row)
+
+from functools import wraps
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'username' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
 @app.route('/')
+@login_required
 def index():
-    return render_template('index.html')
+    username = session['username']
+    tasks = get_tasks(username)
+    return render_template('index.html', username=username, tasks=tasks)
 
-# Get all tasks
-@app.route('/tasks', methods=['GET'])
-def get_tasks():
-    tasks = Task.query.all()
-    return jsonify([
-        {'id': task.id, 'title': task.title, 'completed': task.completed}
-        for task in tasks
-    ])
+@app.route('/add', methods=['POST'])
+@login_required
+def add():
+    task = request.form.get('task')
+    if task:
+        add_task(session['username'], task)
+    return redirect(url_for('index'))
 
-# Add new task and save to CSV
-@app.route('/tasks', methods=['POST'])
-def add_task():
-    print("📩 Received POST /tasks request")
-    data = request.get_json()
-    print("📦 JSON received:", data)
+@app.route('/toggle/<int:task_id>')
+@login_required
+def toggle(task_id):
+    username = session['username']
+    tasks = get_tasks(username)
+    if 0 <= task_id < len(tasks):
+        tasks[task_id]['completed'] = not tasks[task_id]['completed']
+        update_tasks(username, tasks)
+    return redirect(url_for('index'))
 
-    title = data.get('title') if data else None
-    if not title:
-        print("❌ Missing title in request body.")
-        return jsonify({'error': 'Missing title'}), 400
+@app.route('/delete/<int:task_id>')
+@login_required
+def delete(task_id):
+    username = session['username']
+    tasks = get_tasks(username)
+    if 0 <= task_id < len(tasks):
+        tasks.pop(task_id)
+        update_tasks(username, tasks)
+    return redirect(url_for('index'))
 
-    # Save to database
-    task = Task(title=title)
-    db.session.add(task)
-    db.session.commit()
-    print(f"✔ Task added to DB: {task.title}")
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if user_exists(username):
+            flash('Username already exists.')
+            return redirect(url_for('signup'))
+        add_user(username, password)
+        flash('Signup successful! Please log in.')
+        return redirect(url_for('login'))
+    return render_template('signup.html')
 
-    # Save to CSV file
-    csv_file = os.path.join(os.path.dirname(__file__), 'tasks.csv')
-    file_exists = os.path.isfile(csv_file)
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if verify_user(username, password):
+            session['username'] = username
+            return redirect(url_for('index'))
+        flash('Invalid username or password.')
+    return render_template('login.html')
 
-    with open(csv_file, 'a', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        if not file_exists:
-            writer.writerow(['ID', 'Title', 'Completed'])
-        writer.writerow([task.id, task.title, task.completed])
-
-    print(f"📝 Task written to CSV: {task.title}")
-    return jsonify({'id': task.id, 'title': task.title, 'completed': task.completed})
-
-# Toggle task completion
-@app.route('/tasks/<int:task_id>', methods=['PUT'])
-def update_task(task_id):
-    task = Task.query.get_or_404(task_id)
-    data = request.get_json()
-    task.completed = data.get('completed', task.completed)
-    db.session.commit()
-    return jsonify({'message': 'Task updated'})
-
-# Delete task
-@app.route('/tasks/<int:task_id>', methods=['DELETE'])
-def delete_task(task_id):
-    task = Task.query.get_or_404(task_id)
-    db.session.delete(task)
-    db.session.commit()
-    print(f"🗑️ Task deleted from DB: {task.title}")
-
-    # Rewrite tasks.csv after deletion
-    csv_file = os.path.join(os.path.dirname(__file__), 'tasks.csv')
-    tasks = Task.query.all()
-    with open(csv_file, 'w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(['ID', 'Title', 'Completed'])
-        for t in tasks:
-            writer.writerow([t.id, t.title, t.completed])
-    print("🧹 CSV file rewritten after deletion.")
-
-    return jsonify({'message': 'Task deleted'})
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    flash('You have been logged out.')
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(debug=True)
