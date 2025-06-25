@@ -4,6 +4,23 @@ from app import (
     load_tasks, save_tasks, add_task, view_tasks,
     remove_task, mark_task_done, validate_email_address
 )
+import pwinput
+
+def get_password(prompt="Enter password: "):
+    """
+    Prompts the user if they want to show or hide their password while typing,
+    then returns the entered password accordingly.
+    """
+    while True:
+        show = input("Show password while typing? (y/n): ").strip().lower()
+        if show == 'y':
+            password = input(prompt).strip()
+            return password
+        elif show == 'n':
+            password = pwinput.pwinput(prompt, mask='*').strip()
+            return password
+        else:
+            print("Please enter 'y' or 'n'.")
 
 def main():
     print("=== Welcome to the Secure To-Do List App ===")
@@ -17,7 +34,7 @@ def main():
             if not validate_email_address(email):
                 print("Invalid email format. Please try again.")
                 continue
-            password = input("Enter new password: ").strip()
+            password = get_password("Enter new password: ")
             if register_user(email, password):
                 print("A verification code has been sent to your email.")
                 code = set_verification_code(email, password)
@@ -32,7 +49,7 @@ def main():
                 print("User already exists. Try another email.")
         elif choice == "2":
             email = input("Enter your email: ").strip()
-            password = input("Enter your password: ").strip()
+            password = get_password("Enter your password: ")
             if authenticate_user(email, password):
                 if not is_user_verified(email):
                     print("You need to verify your account.")
