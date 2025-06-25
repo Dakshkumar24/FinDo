@@ -1,31 +1,53 @@
-#main.py - User Interface (menus, input/output)
 from app import (
-    register_user, authenticate_user,
+    register_user, authenticate_user, is_user_verified,
+    set_verification_code, verify_user, send_email_verification_code,
     load_tasks, save_tasks, add_task, view_tasks,
-    remove_task, mark_task_done
+    remove_task, mark_task_done, validate_email_address
 )
 
 def main():
     print("=== Welcome to the Secure To-Do List App ===")
-    username = None
+    email = None
 
-    # --- LOGIN OR REGISTER ---
     while True:
         print("\n1. Register\n2. Login\n3. Exit")
         choice = input("Choose an option: ").strip()
         if choice == "1":
-            username = input("Enter new username: ").strip()
+            email = input("Enter your email: ").strip()
+            if not validate_email_address(email):
+                print("Invalid email format. Please try again.")
+                continue
             password = input("Enter new password: ").strip()
-            if register_user(username, password):
-                print("Registration successful! Please login.")
+            if register_user(email, password):
+                print("A verification code has been sent to your email.")
+                code = set_verification_code(email, password)
+                send_email_verification_code(email, code)
+                user_code = input("Enter the verification code: ").strip()
+                if verify_user(email, user_code):
+                    print("Registration and verification successful! Please login.")
+                else:
+                    print("Incorrect code. Registration failed.")
+                    continue
             else:
-                print("Username already exists. Try another.")
+                print("User already exists. Try another email.")
         elif choice == "2":
-            username = input("Username: ").strip()
-            password = input("Password: ").strip()
-            if authenticate_user(username, password):
-                print(f"Login successful! Welcome, {username}.")
-                break
+            email = input("Enter your email: ").strip()
+            password = input("Enter your password: ").strip()
+            if authenticate_user(email, password):
+                if not is_user_verified(email):
+                    print("You need to verify your account.")
+                    code = set_verification_code(email)
+                    send_email_verification_code(email, code)
+                    user_code = input("Enter the verification code: ").strip()
+                    if verify_user(email, user_code):
+                        print("Verification successful! Welcome.")
+                        break
+                    else:
+                        print("Incorrect code. Please try logging in again.")
+                        continue
+                else:
+                    print("Login successful! Welcome.")
+                    break
             else:
                 print("Invalid credentials. Please try again.")
         elif choice == "3":
@@ -34,8 +56,8 @@ def main():
         else:
             print("Invalid choice. Please try again.")
 
-    #   # --- TASK MENU --- To-Do list operations
-    tasks = load_tasks(username)
+    # --- TASK MENU ---
+    tasks = load_tasks(email)
     while True:
         print("\n===== To-Do Menu =====")
         print("1. Add Task")
@@ -65,7 +87,7 @@ def main():
             except ValueError:
                 print("Please enter a valid number.")
         elif choice == "5":
-            save_tasks(username, tasks)
+            save_tasks(email, tasks)
             print("Tasks saved. Logging out.")
             break
         else:
