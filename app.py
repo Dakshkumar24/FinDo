@@ -95,7 +95,7 @@ def generate_verification_code():
 def set_verification_code(email, password=None):
     code = generate_verification_code()
     VERIFICATION_CODES[email] = code
-    if password:
+    if password is not None:  # Only store password if it's provided (not None)
         TEMP_PASSWORDS[email] = password
     return code
 
@@ -108,6 +108,41 @@ def verify_user(email, code):
         VERIFICATION_CODES.pop(email)
         return True
     return False
+
+def reset_password(email, new_password):
+    """Update the password for an existing user"""
+    if not user_exists(email):
+        return False
+        
+    # Read all users
+    users = []
+    with open(USERS_FILE, "r", newline="") as file:
+        reader = csv.reader(file)
+        users = list(reader)
+    
+    # Update the password for the matching user
+    updated = False
+    for user in users:
+        if user and user[0] == email:
+            user[1] = hash_password(new_password)
+            updated = True
+            break
+    
+    # Write the updated users back to the file
+    if updated:
+        with open(USERS_FILE, "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerows(users)
+    
+    return updated
+
+def initiate_password_reset(email):
+    """Initiate password reset by sending verification code to email"""
+    if not user_exists(email):
+        return False
+    code = set_verification_code(email)
+    send_email_verification_code(email, code)
+    return True
 
 def validate_email_address(email):
     try:
