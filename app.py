@@ -4,15 +4,20 @@ import os
 import random
 import smtplib
 import subprocess
+import re
 from email.message import EmailMessage
 from email_validator import validate_email, EmailNotValidError
 
+# --- Folder and file structure setup ---
 DATABASE_FOLDER = "database"
-USERS_FILE = os.path.join(DATABASE_FOLDER, "users.csv")
+USERS_FOLDER = os.path.join(DATABASE_FOLDER, "users")
+USERS_FILE = os.path.join(USERS_FOLDER, "users.csv")
+TASKS_FOLDER = os.path.join(DATABASE_FOLDER, "tasks")
 
-# --- Ensure database folder exists ---
-if not os.path.exists(DATABASE_FOLDER):
-    os.makedirs(DATABASE_FOLDER)
+# Ensure folders exist
+for folder in [DATABASE_FOLDER, USERS_FOLDER, TASKS_FOLDER]:
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 # --- Email sending setup ---
 SENDER_EMAIL = "dakshkumar19860@gmail.com"      # <-- Replace with your Gmail address
@@ -114,35 +119,73 @@ def validate_email_address(email):
 # --- TASK MANAGEMENT WITH NOTEPAD INTEGRATION ---
 
 def get_tasks_filename(email):
-    return os.path.join(DATABASE_FOLDER, f"{email}_tasks.txt")
+    # Only replace / and \ (which are not allowed in filenames)
+    safe_email = re.sub(r"[\\/]", "_", email)
+    return os.path.join(TASKS_FOLDER, f"{safe_email}.csv")
 
 def load_tasks(email):
     filename = get_tasks_filename(email)
-    if not os.path.exists(filename):
-        return []
-    with open(filename, "r", encoding='utf-8') as f:
-        return [line.strip() for line in f if line.strip()]
+    tasks = []
+    if os.path.exists(filename):
+        with open(filename, "r", newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if row:  # skip empty rows
+                    tasks.append(row[0])
+    return tasks
 
 def save_tasks(email, tasks):
     filename = get_tasks_filename(email)
-    with open(filename, "w", encoding='utf-8') as f:
+    with open(filename, "w", newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
         for task in tasks:
-            f.write(task + "\n")
+            writer.writerow([task])
 
 def edit_tasks_in_notepad(email):
     """
-    Opens the user's tasks file in Notepad for direct editing.
+    Opens the user's tasks file in Notepad++ for direct editing.
     Returns the updated list of tasks (one per line, stripped).
     """
-    filename = get_tasks_filename(email)
-    # Ensure the file exists
-    if not os.path.exists(filename):
-        with open(filename, "w", encoding="utf-8") as f:
+    # Use .txt extension for better link handling in Notepad++
+    txt_filename = get_tasks_filename(email).replace('.csv', '.txt')
+    csv_filename = get_tasks_filename(email)
+    
+    # If CSV exists, convert it to a simple text file for Notepad++
+    if os.path.exists(csv_filename):
+        with open(csv_filename, 'r', encoding='utf-8') as f:
+            tasks = [row[0].strip() for row in csv.reader(f) if row]
+        with open(txt_filename, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(tasks))
+    else:
+        with open(txt_filename, 'w', encoding='utf-8') as f:
             pass  # create empty file
 
-    subprocess.run(['notepad.exe', filename])
+    # Open in Notepad++ if available, fallback to default text editor
+    try:
+        subprocess.run(['C:\\Program Files\\Notepad++\\notepad++.exe', '-multiInst', txt_filename])
+    except Exception as e:
+        print(f"Could not open Notepad++: {e}. Using default text editor instead.")
+        subprocess.run(['notepad.exe', txt_filename])
 
-    # After editing, read tasks
-    with open(filename, "r", encoding="utf-8") as f:
-        tasks = [line.strip() for line in f if line.strip()]
+    # After editing, read tasks from the text file
+    tasks = []
+    if os.path.exists(txt_filename):
+        with open(txt_filename, 'r', encoding='utf-8') as f:
+            tasks = [line.strip() for line in f if line.strip()]
+    
+    # Save back to CSV format
+    with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        for task in tasks:
+            writer.writerow([task])
+    
+    # Remove the temporary text file
+    try:
+        os.remove(txt_filename)
+    except Exception as e:
+        print(f"Warning: Could not remove temporary file: {e}")
+    
     return tasks
+
+
+

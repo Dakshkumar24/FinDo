@@ -1,16 +1,14 @@
-from app import (
+from app import(
     register_user, authenticate_user, is_user_verified,
     set_verification_code, verify_user, send_email_verification_code,
     load_tasks, save_tasks, validate_email_address,
-    edit_tasks_in_notepad  # Make sure this is in app.py!
+    edit_tasks_in_notepad
 )
+
 import pwinput
 
+
 def get_password(prompt="Enter password: "):
-    """
-    Prompts the user if they want to show or hide their password while typing,
-    then returns the entered password accordingly.
-    """
     while True:
         show = input("Show password while typing? (y/n): ").strip().lower()
         if show == 'y':
@@ -77,11 +75,13 @@ def main():
     tasks = load_tasks(email)
     while True:
         print("\n===== To-Do Menu =====")
-        print("1. Edit Tasks in Notepad")
+        print("1. Edit Tasks in Notepad++")
         print("2. Save and Logout")
         choice = input("Choose an option: ").strip()
         if choice == "1":
-            print("Your to-do list will open in Notepad. Edit, add, or remove tasks as you wish. Save and close Notepad when done.")
+            print("Your to-do list will open in Notepad++. Edit, add, or remove tasks as you wish.")
+            print("Tip: You can add clickable links by pasting the full URL (e.g., https://example.com)")
+            print("Save your changes and close Notepad++ when done.")
             tasks = edit_tasks_in_notepad(email)
             print("Tasks updated.")
         elif choice == "2":
@@ -93,3 +93,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
