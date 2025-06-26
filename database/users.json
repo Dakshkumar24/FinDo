@@ -7,5 +7,10 @@
         "password": "pbkdf2:sha256:600000$DxFLDlFI8tFVEpOk$2624e290a8ba0a9351b58c44d46375f494730d819b39b7e7d8313dd336bf504b",
         "created_at": "2025-06-25T19:03:42.339735",
         "verified": true
+    },
+    "dakshkumar19860@gmail.com": {
+        "password": "pbkdf2:sha256:600000$OvJYCNEGxEa9oAsF$34505ac138bb1ecc32a3f9415fac9d08631146768a90f23ee205cda9d84e7c3b",
+        "created_at": "2025-06-26T16:34:44.570310",
+        "verified": true
     }
 }
