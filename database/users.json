@@ -2,5 +2,10 @@
     "dkumar2@sfsu.edu": {
         "password": "pbkdf2:sha256:600000$nkgBo7jtRFcTemYK$d098f3ccc29e8fcc8962e270949b26a81f7f790df4bd15bed0680378fbb3a2ff",
         "created_at": "2025-06-25T18:44:46.415830"
+    },
+    "divak.m14@gmail.com": {
+        "password": "pbkdf2:sha256:600000$DxFLDlFI8tFVEpOk$2624e290a8ba0a9351b58c44d46375f494730d819b39b7e7d8313dd336bf504b",
+        "created_at": "2025-06-25T19:03:42.339735",
+        "verified": true
     }
 }

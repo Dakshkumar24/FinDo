@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Email - Todo App{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">Verify Your Email</h2>
+                <p class="text-center mb-4">We've sent a verification code to <strong>{{ email }}</strong></p>
+                
+                <form method="POST" action="{{ url_for('verify_email') }}">
+                    <div class="mb-3">
+                        <label for="verification_code" class="form-label">Verification Code</label>
+                        <input type="text" class="form-control text-center" id="verification_code" 
+                               name="verification_code" required autocomplete="off" maxlength="6" 
+                               pattern="\d{6}" title="Please enter the 6-digit code">
+                        <div class="form-text">Enter the 6-digit code sent to your email</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Verify Email</button>
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-secondary">Back to Register</a>
+                    </div>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <p class="mb-0">Didn't receive the code? <a href="{{ url_for('resend_verification') }}">Resend code</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-submit when all digits are entered
+const codeInput = document.getElementById('verification_code');
+if (codeInput) {
+    codeInput.addEventListener('input', function(e) {
+        if (this.value.length === 6) {
+            this.form.submit();
+        }
+    });
+}
+</script>
+{% endblock %}
