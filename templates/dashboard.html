@@ -14,8 +14,8 @@
     {% for todo in todos %}
     <div class="list-group-item list-group-item-action">
         <div class="d-flex w-100 justify-content-between align-items-center">
-            <div class="form-check
-                <input class="form-check-input todo-checkbox" type="checkbox" 
+            <div class="form-check">
+                <input class="form-check-input todo-checkbox" type="checkbox"
                        data-todo-id="{{ todo.id }}" {% if todo.completed %}checked{% endif %}>
                 <label class="form-check-label {% if todo.completed %}text-muted text-decoration-line-through{% endif %}">
                     <h5 class="mb-1">{{ todo.title|urlize(40, true) }}</h5>
@@ -44,6 +44,23 @@
     {% endfor %}
 </div>
 
+<!-- Recently Deleted Section -->
+<div class="mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Recently Deleted</h2>
+        <button class="btn btn-sm btn-outline-secondary" onclick="loadDeletedTodos()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+    <div id="deletedTodosList" class="list-group">
+        <div class="text-center my-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading deleted todos...</p>
+        </div>
+    </div>
+</div>
 <!-- Add Todo Modal -->
 <div class="modal fade" id="addTodoModal" tabindex="-1" aria-labelledby="addTodoModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -79,6 +96,47 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Todo Modal -->
+<div class="modal fade" id="editTodoModal" tabindex="-1" aria-labelledby="editTodoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editTodoModalLabel">Edit Todo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editTodoForm">
+                <div class="modal-body">
+                    <div id="editFormError" class="alert alert-danger d-none"></div>
+                    <input type="hidden" id="edit_todo_id" name="id">
+                    <div class="mb-3">
+                        <label for="edit_title" class="form-label">Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_title" name="title" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_due_date" class="form-label">Due Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="edit_due_date" name="due_date" required>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input class="form-check-input" type="checkbox" id="edit_completed" name="completed">
+                        <label class="form-check-label" for="edit_completed">Completed</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -89,25 +147,25 @@ document.addEventListener('DOMContentLoaded', function() {
     if (addTodoForm) {
         addTodoForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const formData = new FormData(addTodoForm);
             const submitBtn = addTodoForm.querySelector('button[type="submit"]');
             const spinner = submitBtn.querySelector('.spinner-border');
             const errorDiv = document.getElementById('addFormError');
-            
+
             // Show loading state
             submitBtn.disabled = true;
             spinner.classList.remove('d-none');
             errorDiv.classList.add('d-none');
-            
+
             try {
                 const response = await fetch('/add_todo', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (response.ok) {
                     // Close the modal and reload the page to show the new todo
                     const modal = bootstrap.Modal.getInstance(document.getElementById('addTodoModal'));
@@ -128,17 +186,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Handle todo deletion
-    document.querySelectorAll('.delete-todo').forEach(button => {
-        button.addEventListener('click', async function() {
+    document.addEventListener('click', async function(e) {
+        if (e.target.closest('.delete-todo')) {
+            const button = e.target.closest('.delete-todo');
             if (!confirm('Are you sure you want to delete this todo?')) {
                 return;
             }
-            
-            const todoId = this.dataset.todoId;
-            const todoItem = this.closest('.list-group-item');
-            
+
+            const todoId = parseInt(button.dataset.todoId);
+            const todoItem = button.closest('.list-group-item');
+
             try {
                 const response = await fetch(`/delete_todo/${todoId}`, {
                     method: 'DELETE',
@@ -146,109 +205,261 @@ document.addEventListener('DOMContentLoaded', function() {
                         'Content-Type': 'application/json',
                     },
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (response.ok) {
                     // Remove the todo item from the UI
                     todoItem.remove();
-                    
-                    // Show success message
-                    const alert = document.createElement('div');
-                    alert.className = 'alert alert-success alert-dismissible fade show mt-3';
-                    alert.role = 'alert';
-                    alert.innerHTML = `
-                        Todo deleted successfully!
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    `;
-                    
-                    // Insert the alert before the todo list
-                    const todoList = document.querySelector('.list-group');
-                    if (todoList) {
-                        todoList.parentNode.insertBefore(alert, todoList);
-                    }
-                    
-                    // Auto-remove the alert after 3 seconds
-                    setTimeout(() => {
-                        const bsAlert = new bootstrap.Alert(alert);
-                        bsAlert.close();
-                    }, 3000);
+                    showAlert('Todo moved to trash', 'success');
+                    loadDeletedTodos(); // Refresh the deleted todos list
                 } else {
                     throw new Error(result.error || 'Failed to delete todo');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert(`Error deleting todo: ${error.message}`);
+                showAlert(`Error: ${error.message}`, 'danger');
             }
-        });
+        }
     });
-    
+
     // Handle todo editing
-    document.querySelectorAll('.edit-todo').forEach(button => {
-        button.addEventListener('click', function() {
-            const todoItem = this.closest('.list-group-item');
-            const todoId = this.dataset.todoId;
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-todo')) {
+            const button = e.target.closest('.edit-todo');
+            const todoItem = button.closest('.list-group-item');
+            const todoId = parseInt(button.dataset.todoId);
             const todoTitle = todoItem.querySelector('h5').textContent.trim();
-            const todoDescription = todoItem.querySelector('.todo-description')?.textContent.trim() || '';
-            const todoDueDate = todoItem.querySelector('small').textContent.replace('Due: ', '').trim();
-            const isCompleted = todoItem.querySelector('.form-check-input').checked;
-            
+            const todoDescription = todoItem.querySelector('p.text-muted')?.textContent.trim() || '';
+            const todoDueDate = todoItem.querySelector('small')?.textContent.replace('Due: ', '').trim() || '';
+            const isCompleted = todoItem.querySelector('.form-check-input')?.checked || false;
+
             // Populate the edit form
             document.getElementById('edit_todo_id').value = todoId;
             document.getElementById('edit_title').value = todoTitle;
             document.getElementById('edit_description').value = todoDescription;
             document.getElementById('edit_due_date').value = todoDueDate;
             document.getElementById('edit_completed').checked = isCompleted;
-            
+
             // Show the edit modal
             const editModal = new bootstrap.Modal(document.getElementById('editTodoModal'));
             editModal.show();
-        });
-    });
-    
-    // Make sure links open in a new tab
-    document.querySelectorAll('a[href^="http"]').forEach(link => {
-        link.setAttribute('target', '_blank');
-        link.setAttribute('rel', 'noopener noreferrer');
+        }
     });
 
-    // Handle todo completion toggle
-    document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', async function() {
-            const todoId = this.dataset.todoId;
-            const isCompleted = this.checked;
-            
+    // Handle edit form submission
+    const editTodoForm = document.getElementById('editTodoForm');
+    if (editTodoForm) {
+        editTodoForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(editTodoForm);
+            const todoId = document.getElementById('edit_todo_id').value;
+            const submitBtn = editTodoForm.querySelector('button[type="submit"]');
+            const spinner = submitBtn.querySelector('.spinner-border');
+            const errorDiv = document.getElementById('editFormError');
+
+            // Show loading state
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            errorDiv.classList.add('d-none');
+
             try {
-                const response = await fetch(`/toggle_todo/${todoId}`, {
+                // Convert FormData to JSON
+                const data = {};
+                formData.forEach((value, key) => {
+                    data[key] = value;
+                });
+                data['completed'] = document.getElementById('edit_completed').checked;
+
+                const response = await fetch(`/update_todo/${todoId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        completed: isCompleted
-                    })
+                    body: JSON.stringify(data)
                 });
-                
-                if (!response.ok) {
-                    const result = await response.json();
-                    throw new Error(result.error || 'Failed to update todo');
-                }
-                
-                // Toggle the text decoration
-                const label = this.nextElementSibling;
-                if (isCompleted) {
-                    label.classList.add('text-muted', 'text-decoration-line-through');
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Close the modal and reload the page
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editTodoModal'));
+                    modal.hide();
+                    window.location.reload();
                 } else {
-                    label.classList.remove('text-muted', 'text-decoration-line-through');
+                    // Show error message
+                    errorDiv.textContent = result.error || 'An error occurred. Please try again.';
+                    errorDiv.classList.remove('d-none');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                // Revert the checkbox state on error
-                this.checked = !isCompleted;
-                alert(`Error updating todo: ${error.message}`);
+                errorDiv.textContent = 'An error occurred. Please try again.';
+                errorDiv.classList.remove('d-none');
+            } finally {
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
             }
         });
+    }
+
+    // Function to load deleted todos
+    async function loadDeletedTodos() {
+        const deletedTodosList = document.getElementById('deletedTodosList');
+        if (!deletedTodosList) {
+            console.error('Deleted todos container not found');
+            return;
+        }
+
+        try {
+            // Show loading state
+            deletedTodosList.innerHTML = `
+                <div class="text-center my-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading deleted todos...</p>
+                </div>`;
+
+            const response = await fetch('/get_deleted_todos');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const deletedTodos = await response.json();
+            console.log('Received deleted todos:', deletedTodos);
+
+            if (!Array.isArray(deletedTodos)) {
+                throw new Error('Invalid response format: expected an array');
+            }
+
+            if (deletedTodos.length === 0) {
+                deletedTodosList.innerHTML = `
+                    <div class="alert alert-info mb-0">
+                        No recently deleted todos found.
+                    </div>`;
+                return;
+            }
+
+            deletedTodosList.innerHTML = deletedTodos.map(todo => `
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${todo.title || 'Untitled Todo'}</h6>
+                        <small class="text-muted">
+                            Deleted: ${new Date(todo.deleted_at).toLocaleString()}
+                        </small>
+                    </div>
+                    ${todo.description ? `<p class="mb-1 small text-muted">${todo.description}</p>` : ''}
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-success restore-todo me-2" data-todo-id="${todo.id}">
+                            <i class="bi bi-arrow-counterclockwise"></i> Restore
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-permanently" data-todo-id="${todo.id}">
+                            <i class="bi bi-trash"></i> Delete Permanently
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+        } catch (error) {
+            console.error('Error loading deleted todos:', error);
+            deletedTodosList.innerHTML = `
+                <div class="alert alert-danger">
+                    Failed to load deleted todos. Please try again.
+                    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="loadDeletedTodos()">
+                        <i class="bi bi-arrow-clockwise"></i> Retry
+                    </button>
+                </div>`;
+        }
+    }
+
+    // Handle restore todo
+    document.addEventListener('click', async function(e) {
+        if (e.target.closest('.restore-todo')) {
+            const button = e.target.closest('.restore-todo');
+            const todoId = parseInt(button.dataset.todoId);
+
+            try {
+                const response = await fetch(`/restore_todo/${todoId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    showAlert('Todo restored successfully!', 'success');
+                    loadDeletedTodos(); // Refresh the list
+                    // Reload the page to show the restored todo in the main list
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    const result = await response.json();
+                    throw new Error(result.error || 'Failed to restore todo');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(`Error: ${error.message}`, 'danger');
+            }
+        }
     });
+
+    // Handle permanent delete
+    document.addEventListener('click', async function(e) {
+        if (e.target.closest('.delete-permanently')) {
+            const button = e.target.closest('.delete-permanently');
+            if (!confirm('Are you sure you want to permanently delete this todo? This action cannot be undone.')) {
+                return;
+            }
+
+            const todoId = parseInt(button.dataset.todoId);
+
+            try {
+                const response = await fetch(`/delete_permanently/${todoId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    showAlert('Todo permanently deleted', 'success');
+                    loadDeletedTodos(); // Refresh the list
+                } else {
+                    const result = await response.json();
+                    throw new Error(result.error || 'Failed to delete todo');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(`Error: ${error.message}`, 'danger');
+            }
+        }
+    });
+
+    // Helper function to show alerts
+    function showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+
+        // Insert the alert at the top of the content
+        const content = document.querySelector('.container');
+        if (content) {
+            content.insertBefore(alertDiv, content.firstChild);
+        }
+
+        // Auto-remove the alert after 5 seconds
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alertDiv);
+            bsAlert.close();
+        }, 5000);
+    }
+
+    // Load deleted todos when the page loads
+    loadDeletedTodos();
 });
 </script>
 {% endblock %}

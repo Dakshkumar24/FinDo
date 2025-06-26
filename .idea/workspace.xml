@@ -6,7 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="a1fe95fc-db23-46e8-b387-b42dc4559458" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/todos.json" beforeDir="false" afterPath="$PROJECT_DIR$/database/todos.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/flask_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/dashboard.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -162,7 +164,7 @@
       <workItem from="1750816561366" duration="12862000" />
       <workItem from="1750834348419" duration="13442000" />
       <workItem from="1750889338744" duration="45000" />
-      <workItem from="1750889399939" duration="11131000" />
+      <workItem from="1750889399939" duration="17991000" />
     </task>
     <servers />
   </component>

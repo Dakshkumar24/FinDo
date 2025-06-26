@@ -1,0 +1,97 @@
+{{ ... }}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    // Add CSRF token to all AJAX requests
+    if (csrfToken) {
+        const csrfSafeMethod = (method) => {
+            // These HTTP methods do not require CSRF protection
+            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+        };
+
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
+                }
+            }
+        });
+    }
+
+    const contactForm = document.getElementById('contactForm');
+    if (contactForm) {
+        contactForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = contactForm.querySelector('button[type="submit"]');
+            const spinner = submitBtn.querySelector('.spinner-border');
+
+            // Show loading state
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+
+            try {
+                const formData = {
+                    name: document.getElementById('name').value,
+                    email: document.getElementById('email').value,
+                    message: document.getElementById('message').value
+                };
+
+                const response = await fetch('/contact', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken || ''
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Show success message
+                    showAlert(result.message || 'Your message has been sent successfully!', 'success');
+                    // Reset form
+                    contactForm.reset();
+                } else {
+                    throw new Error(result.error || 'Failed to send message');
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(error.message || 'An error occurred. Please try again.', 'danger');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        });
+    }
+
+    function showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+
+        // Insert the alert at the top of the content
+        const content = document.querySelector('.container');
+        if (content) {
+            content.insertBefore(alertDiv, content.firstChild);
+        }
+
+        // Auto-remove the alert after 5 seconds
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alertDiv);
+            bsAlert.close();
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

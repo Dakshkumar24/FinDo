@@ -11,20 +11,21 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from dotenv import load_dotenv
+from flask_mail import Mail, Message
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Change this to a secure secret key in production
-
-# Email configuration - ensure all required variables are set
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Change this to a secure secret key in production
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
 app.config['MAIL_USERNAME'] = 'dakshkumar19860@gmail.com'  # Using the email directly for now
 app.config['MAIL_PASSWORD'] = 'jpud hbik syny jsnn'  # Using the app password directly for now
 app.config['MAIL_DEFAULT_SENDER'] = 'dakshkumar19860@gmail.com'
+
+mail = Mail(app)
 
 # Enable debug mode for development
 app.debug = True
@@ -85,6 +86,7 @@ def load_user(user_id):
 DATABASE_FOLDER = 'database'
 USERS_FILE = os.path.join(DATABASE_FOLDER, 'users.json')
 TODOS_FILE = os.path.join(DATABASE_FOLDER, 'todos.json')
+DELETED_TODOS_FILE = os.path.join(DATABASE_FOLDER, 'deleted_todos.json')
 
 # Ensure database folder exists
 os.makedirs(DATABASE_FOLDER, exist_ok=True)
@@ -109,7 +111,35 @@ def save_todos(todos):
     with open(TODOS_FILE, 'w') as f:
         json.dump(todos, f, indent=4)
 
-# The @login_required decorator is now provided by Flask-Login
+def load_deleted_todos():
+    if os.path.exists(DELETED_TODOS_FILE):
+        with open(DELETED_TODOS_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_deleted_todos(deleted_todos):
+    with open(DELETED_TODOS_FILE, 'w') as f:
+        json.dump(deleted_todos, f, indent=4)
+
+def cleanup_old_deleted_todos():
+    """Remove deleted todos that are older than 15 days"""
+    deleted_todos = load_deleted_todos()
+    cutoff_date = datetime.now() - timedelta(days=15)
+    
+    for user_email in list(deleted_todos.keys()):
+        if not deleted_todos[user_email]:
+            continue
+            
+        # Filter out todos older than 15 days
+        filtered_todos = [
+            todo for todo in deleted_todos[user_email]
+            if 'deleted_at' in todo and 
+            datetime.fromisoformat(todo['deleted_at']) > cutoff_date
+        ]
+        
+        deleted_todos[user_email] = filtered_todos
+    
+    save_deleted_todos(deleted_todos)
 
 @app.route('/')
 def index():
@@ -296,7 +326,7 @@ def register():
 @login_required
 def dashboard():
     todos = load_todos()
-    user_todos = todos.get(current_user.id, [])
+    user_todos = todos.get(str(current_user.id), [])
     return render_template('dashboard.html', todos=user_todos)
 
 @app.route('/add_todo', methods=['POST'])
@@ -310,7 +340,7 @@ def add_todo():
         return jsonify({'error': 'Title and due date are required'}), 400
     
     todos = load_todos()
-    user_todos = todos.get(current_user.id, [])
+    user_todos = todos.get(str(current_user.id), [])
     
     new_todo = {
         'id': len(user_todos) + 1,
@@ -322,7 +352,7 @@ def add_todo():
     }
     
     user_todos.append(new_todo)
-    todos[current_user.id] = user_todos
+    todos[str(current_user.id)] = user_todos
     save_todos(todos)
     
     return jsonify({'success': True, 'todo': new_todo})
@@ -331,36 +361,133 @@ def add_todo():
 @login_required
 def delete_todo(todo_id):
     todos = load_todos()
-    user_todos = todos.get(current_user.id, [])
+    deleted_todos = load_deleted_todos()
     
-    initial_length = len(user_todos)
-    user_todos = [todo for todo in user_todos if todo['id'] != todo_id]
+    user_todos = todos.get(str(current_user.id), [])
+    todo_to_delete = None
+    updated_todos = []
     
-    if len(user_todos) == initial_length:
+    # Find and remove the todo
+    for todo in user_todos:
+        if todo['id'] == todo_id:
+            todo_to_delete = todo
+        else:
+            updated_todos.append(todo)
+    
+    if not todo_to_delete:
         return jsonify({'error': 'Todo not found'}), 404
     
-    todos[current_user.id] = user_todos
-    save_todos(todos)
+    # Add to deleted todos with timestamp
+    if str(current_user.id) not in deleted_todos:
+        deleted_todos[str(current_user.id)] = []
     
-    return jsonify({'success': True, 'message': 'Todo deleted successfully'})
+    todo_to_delete['deleted_at'] = datetime.now().isoformat()
+    deleted_todos[str(current_user.id)].append(todo_to_delete)
+    
+    # Save changes
+    todos[str(current_user.id)] = updated_todos
+    save_todos(todos)
+    save_deleted_todos(deleted_todos)
+    
+    # Clean up old deleted todos
+    cleanup_old_deleted_todos()
+    
+    return jsonify({'success': True, 'message': 'Todo moved to trash'})
+
+@app.route('/get_deleted_todos')
+@login_required
+def get_deleted_todos():
+    deleted_todos = load_deleted_todos()
+    user_email = current_user.id  # Assuming current_user.id contains the email
+    user_deleted_todos = deleted_todos.get(user_email, [])
+    return jsonify(user_deleted_todos)
+
+@app.route('/restore_todo/<int:todo_id>', methods=['POST'])
+@login_required
+def restore_todo(todo_id):
+    todos = load_todos()
+    deleted_todos = load_deleted_todos()
+    
+    user_deleted_todos = deleted_todos.get(str(current_user.id), [])
+    todo_to_restore = None
+    updated_deleted_todos = []
+    
+    # Find and remove the todo from deleted
+    for todo in user_deleted_todos:
+        if todo['id'] == todo_id:
+            todo_to_restore = todo
+        else:
+            updated_deleted_todos.append(todo)
+    
+    if not todo_to_restore:
+        return jsonify({'error': 'Deleted todo not found'}), 404
+    
+    # Remove deleted_at field and add back to active todos
+    if 'deleted_at' in todo_to_restore:
+        del todo_to_restore['deleted_at']
+    
+    if str(current_user.id) not in todos:
+        todos[str(current_user.id)] = []
+    
+    todos[str(current_user.id)].append(todo_to_restore)
+    deleted_todos[str(current_user.id)] = updated_deleted_todos
+    
+    # Save changes
+    save_todos(todos)
+    save_deleted_todos(deleted_todos)
+    
+    return jsonify({'success': True, 'message': 'Todo restored successfully'})
+
+@app.route('/delete_permanently/<int:todo_id>', methods=['DELETE'])
+@login_required
+def delete_permanently(todo_id):
+    deleted_todos = load_deleted_todos()
+    user_deleted_todos = deleted_todos.get(str(current_user.id), [])
+    updated_deleted_todos = []
+    found = False
+    
+    # Remove the todo from deleted
+    for todo in user_deleted_todos:
+        if todo['id'] != todo_id:
+            updated_deleted_todos.append(todo)
+        else:
+            found = True
+    
+    if not found:
+        return jsonify({'error': 'Deleted todo not found'}), 404
+    
+    deleted_todos[str(current_user.id)] = updated_deleted_todos
+    save_deleted_todos(deleted_todos)
+    
+    return jsonify({'success': True, 'message': 'Todo permanently deleted'})
 
 @app.route('/update_todo/<int:todo_id>', methods=['POST'])
 @login_required
 def update_todo(todo_id):
     todos = load_todos()
-    user_todos = todos.get(current_user.id, [])
+    user_todos = todos.get(str(current_user.id), [])
     
     todo_to_update = next((todo for todo in user_todos if todo['id'] == todo_id), None)
     if not todo_to_update:
         return jsonify({'error': 'Todo not found'}), 404
     
-    # Update todo fields
-    todo_to_update['title'] = request.form.get('title', todo_to_update['title'])
-    todo_to_update['description'] = request.form.get('description', todo_to_update.get('description', ''))
-    todo_to_update['due_date'] = request.form.get('due_date', todo_to_update['due_date'])
-    todo_to_update['completed'] = 'completed' in request.form
+    # Get data from form
+    data = request.get_json()
+    if not data:
+        data = request.form
     
-    todos[current_user.id] = user_todos
+    # Update todo fields
+    if 'title' in data:
+        todo_to_update['title'] = data['title']
+    if 'description' in data:
+        todo_to_update['description'] = data['description']
+    if 'due_date' in data:
+        todo_to_update['due_date'] = data['due_date']
+    if 'completed' in data:
+        todo_to_update['completed'] = data['completed'] == 'true' or data['completed'] is True
+    
+    # Save changes
+    todos[str(current_user.id)] = user_todos
     save_todos(todos)
     
     return jsonify({'success': True, 'message': 'Todo updated successfully'})
@@ -369,7 +496,7 @@ def update_todo(todo_id):
 @login_required
 def toggle_todo(todo_id):
     todos = load_todos()
-    user_todos = todos.get(current_user.id, [])
+    user_todos = todos.get(str(current_user.id), [])
     
     todo_to_update = next((todo for todo in user_todos if todo['id'] == todo_id), None)
     if not todo_to_update:
@@ -377,7 +504,7 @@ def toggle_todo(todo_id):
     
     todo_to_update['completed'] = not todo_to_update['completed']
     
-    todos[current_user.id] = user_todos
+    todos[str(current_user.id)] = user_todos
     save_todos(todos)
     
     return jsonify({'success': True, 'completed': todo_to_update['completed']})
@@ -392,6 +519,45 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+
+@app.route('/contact', methods=['POST'])
+def contact():
+    if request.method == 'POST':
+        data = request.get_json()
+        
+        # Validate input
+        if not all(key in data for key in ['name', 'email', 'message']):
+            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+        
+        name = data['name']
+        email = data['email']
+        message = data['message']
+        
+        try:
+            # Send email
+            msg = Message(
+                subject=f'New Contact Form Submission from {name}',
+                recipients=[os.getenv('MAIL_DEFAULT_SENDER')],
+                reply_to=email,
+                body=f"""
+                You have received a new contact form submission:
+                
+                Name: {name}
+                Email: {email}
+                
+                Message:
+                {message}
+                """
+            )
+            
+            mail.send(msg)
+            return jsonify({'success': True, 'message': 'Your message has been sent successfully!'})
+            
+        except Exception as e:
+            print(f"Error sending email: {str(e)}")
+            return jsonify({'success': False, 'error': 'Failed to send message. Please try again later.'}), 500
+    
+    return jsonify({'success': False, 'error': 'Method not allowed'}), 405
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
