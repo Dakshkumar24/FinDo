@@ -162,65 +162,39 @@ def load_tasks(email):
     filename = get_tasks_filename(email)
     tasks = []
     if os.path.exists(filename):
-        with open(filename, "r", newline='', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if row:  # skip empty rows
-                    tasks.append(row[0])
+        with open(filename, 'r', encoding='utf-8') as f:
+            tasks = [line.strip() for line in f if line.strip() and not line.startswith('#')]
     return tasks
 
 def save_tasks(email, tasks):
     filename = get_tasks_filename(email)
-    with open(filename, "w", newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        for task in tasks:
-            writer.writerow([task])
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write("# Add your tasks below, one per line\n")
+        f.write("# Save and close this file when done\n\n")
+        f.write('\n'.join(tasks))
 
 def edit_tasks_in_notepad(email):
     """
-    Opens the user's tasks file in Notepad++ for direct editing.
-    Returns the updated list of tasks (one per line, stripped).
+    Opens the user's tasks file in Notepad++ for editing.
+    Returns the updated list of tasks.
     """
-    # Use .txt extension for better link handling in Notepad++
-    txt_filename = get_tasks_filename(email).replace('.csv', '.txt')
-    csv_filename = get_tasks_filename(email)
+    filename = get_tasks_filename(email)
     
-    # If CSV exists, convert it to a simple text file for Notepad++
-    if os.path.exists(csv_filename):
-        with open(csv_filename, 'r', encoding='utf-8') as f:
-            tasks = [row[0].strip() for row in csv.reader(f) if row]
-        with open(txt_filename, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(tasks))
-    else:
-        with open(txt_filename, 'w', encoding='utf-8') as f:
-            pass  # create empty file
-
-    # Open in Notepad++ if available, fallback to default text editor
+    # Ensure the file exists
+    if not os.path.exists(filename):
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write("# Add your tasks below, one per line\n")
+            f.write("# Save and close this file when done\n\n")
+    
+    # Open in Notepad++
     try:
-        subprocess.run(['C:\\Program Files\\Notepad++\\notepad++.exe', '-multiInst', txt_filename])
+        subprocess.run(['C:\\Program Files\\Notepad++\\notepad++.exe', '-multiInst', filename], check=True)
     except Exception as e:
         print(f"Could not open Notepad++: {e}. Using default text editor instead.")
-        subprocess.run(['notepad.exe', txt_filename])
-
-    # After editing, read tasks from the text file
-    tasks = []
-    if os.path.exists(txt_filename):
-        with open(txt_filename, 'r', encoding='utf-8') as f:
-            tasks = [line.strip() for line in f if line.strip()]
+        subprocess.run(['notepad.exe', filename])
     
-    # Save back to CSV format
-    with open(csv_filename, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        for task in tasks:
-            writer.writerow([task])
-    
-    # Remove the temporary text file
-    try:
-        os.remove(txt_filename)
-    except Exception as e:
-        print(f"Warning: Could not remove temporary file: {e}")
-    
-    return tasks
+    # Reload the tasks
+    return load_tasks(email)
 
 
 

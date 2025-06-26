@@ -1,0 +1,13 @@
+# INSTRUCTIONS:
+# 1. Edit your tasks in the table below
+# 2. Format: Task | Due Date (one task per line, separate with | )
+# 3. Example: Complete project report | 2024-06-30
+# 4. Keep the header line (Task | Due Date) as is
+# 5. Save and close this file when done
+
+Task | Due Date
+-----|----------
+ssss | ----------
+sssss | ----------
+Call mom | ----------
+call darpan | 2024-06-3-

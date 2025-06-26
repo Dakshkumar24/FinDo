@@ -110,23 +110,26 @@ def main():
     # --- TASK MENU ---
     tasks = load_tasks(email)
     while True:
-        print("\n===== To-Do Menu =====")
-        print("1. Edit Tasks in Notepad++")
+        print("\n===== To-Do List Menu =====")
+        print("1. Open and Edit Tasks in Notepad++")
         print("2. Save and Logout")
-        choice = input("Choose an option: ").strip()
+        choice = input("Choose an option (1-2): ").strip()
+        
         if choice == "1":
-            print("Your to-do list will open in Notepad++. Edit, add, or remove tasks as you wish.")
-            print("Tip: You can add clickable links by pasting the full URL (e.g., https://example.com)")
-            print("Save your changes and close Notepad++ when done.")
+            print("\nOpening Notepad++ with your tasks...")
+            print("• Add, edit, or delete tasks")
+            print("• One task per line")
+            print("• Just save and close Notepad++ when you're done")
             tasks = edit_tasks_in_notepad(email)
-            print("Tasks updated.")
+            print("\nTasks have been saved successfully!")
+            
         elif choice == "2":
             save_tasks(email, tasks)
-            print("Tasks saved. Logging out.")
+            print("\nTasks saved. Logging out.")
             break
+            
         else:
-            print("Invalid choice. Please try again.")
+            print("\nInvalid choice. Please enter 1 or 2.")
 
 if __name__ == "__main__":
     main()
-
