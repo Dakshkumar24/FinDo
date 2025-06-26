@@ -1,63 +1,113 @@
-# To-Do List Application
+# Web-Based Todo List Application
 
-A simple, secure, terminal-based to-do list application built with Python.  
-Features user registration, email-based verification, login, and basic task management (add, view, mark as done, remove).  
-Verification codes are sent to the user's email using Gmail SMTP.
+A secure, responsive web application for managing your tasks, built with Python Flask. Features user registration with email verification, secure login, and full CRUD operations for tasks. The application uses Bootstrap 5 for a clean, modern interface and includes email verification for enhanced security.
+
+![Todo App Screenshot](https://via.placeholder.com/800x500.png?text=Todo+App+Screenshot)
+
+## ✨ Features
+
+### 🔐 User Authentication
+- **Secure Registration** with email verification
+- **Login/Logout** functionality with session management
+- **Password Hashing** for security
+- **Email Verification** with expiring verification codes
+
+### 📝 Task Management
+- **Create** new tasks with title, description, and due date
+- **Read** all your tasks in a clean, organized view
+- **Update** task details or mark as complete
+- **Delete** tasks you no longer need
+- **Responsive Design** works on desktop and mobile devices
+
+### 🛠️ Technical Features
+- **Flask** web framework
+- **SQLite** database (via SQLAlchemy)
+- **Bootstrap 5** for responsive design
+- **Flask-Login** for session management
+- **Email verification** with SMTP
+- **CSRF Protection** for form security
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.7 or higher
+- Gmail account (for email sending)
+- pip (Python package manager)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/todo-app.git
+   cd todo-app
+   ```
+
+2. **Create and activate a virtual environment**
+   ```bash
+   # Windows
+   python -m venv venv
+   .\venv\Scripts\activate
+   
+   # macOS/Linux
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Set up environment variables**
+   Create a `.env` file in the root directory with the following content:
+   ```
+   FLASK_APP=flask_app.py
+   FLASK_ENV=development
+   SECRET_KEY=your-secret-key-here
+   MAIL_SERVER=smtp.gmail.com
+   MAIL_PORT=587
+   MAIL_USE_TLS=True
+   MAIL_USERNAME=your-email@gmail.com
+   MAIL_PASSWORD=your-app-password
+   MAIL_DEFAULT_SENDER=your-email@gmail.com
+   ```
+
+5. **Initialize the database**
+   ```bash
+   python init_db.py
+   ```
+
+6. **Run the application**
+   ```bash
+   python flask_app.py
+   ```
+
+7. **Open in your browser**
+   Visit `http://127.0.0.1:8000` in your web browser
+
+## 📧 Email Configuration
+For email verification to work, you need to:
+1. Use a Gmail account
+2. Enable "Less secure app access" or create an App Password
+3. Update the `.env` file with your email credentials
+
+## 🔧 Troubleshooting
+
+### Common Issues
+- **Email not sending**: Check your Gmail security settings and app password
+- **Database errors**: Make sure the `database` directory exists and is writable
+- **Module not found**: Run `pip install -r requirements.txt`
+
+## 📝 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+- Flask Team for the amazing web framework
+- Bootstrap for the responsive design
+- All open-source contributors
+
+## 📬 Contact
+Have questions or suggestions? Feel free to open an issue or submit a pull request.
 
 ---
-
-## Features
-
-- **User Registration & Login**  
-  Sign up with your email and password. Login is only possible after email verification.
-
-- **Email Verification**  
-  Upon registration, a verification code is sent to your email. Enter the code to activate your account.
-
-- **Task Management**  
-  - Add new tasks  
-  - View all tasks  
-  - Mark tasks as done  
-  - Remove tasks  
-  - Tasks are saved per user
-
----
-
-## Requirements
-
-- Python 3.7+
-- Gmail account with [App Password](https://support.google.com/accounts/answer/185833?hl=en) for email sending
-
-Install dependencies:
-
-## pip install -r requirements.txt
-
-requirements.txt
-
----
-## How It Works
-
-- **Register:**  
-Enter your email and password.  
-A verification code is sent to your email.
-
-- **Verify:**  
-Enter the code from your inbox to complete registration.
-
-- **Login:**  
-Use your email and password to access your personal to-do list.
-
-- **Manage Tasks:**  
-Add, view, mark as done, and remove your tasks directly from the terminal.
-
----
-
-## Notes
-
-- All user data and tasks are stored in the `database/` folder as CSV and text files.
-- The app uses only your terminal—no web interface required.
-- For security, never share your Gmail app password.
-
----
-
-**Built with Python and ❤️ for learning and productivity.**
+Built with ❤️ and Python
