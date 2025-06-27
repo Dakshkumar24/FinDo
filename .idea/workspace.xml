@@ -6,8 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="a1fe95fc-db23-46e8-b387-b42dc4559458" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/base.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,7 +36,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 4
@@ -167,7 +165,7 @@
       <workItem from="1750981060130" duration="29000" />
       <workItem from="1750981090720" duration="1035000" />
       <workItem from="1751051990254" duration="19000" />
-      <workItem from="1751052019647" duration="1853000" />
+      <workItem from="1751052019647" duration="2173000" />
     </task>
     <servers />
   </component>
