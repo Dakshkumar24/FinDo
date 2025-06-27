@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from dotenv import load_dotenv
 from flask_mail import Mail, Message
+import json
+from datetime import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -87,9 +89,15 @@ DATABASE_FOLDER = 'database'
 USERS_FILE = os.path.join(DATABASE_FOLDER, 'users.json')
 TODOS_FILE = os.path.join(DATABASE_FOLDER, 'todos.json')
 DELETED_TODOS_FILE = os.path.join(DATABASE_FOLDER, 'deleted_todos.json')
+EXPENSES_FILE = os.path.join(DATABASE_FOLDER, 'expenses.json')
 
 # Ensure database folder exists
 os.makedirs(DATABASE_FOLDER, exist_ok=True)
+
+# Initialize expenses file if it doesn't exist
+if not os.path.exists(EXPENSES_FILE):
+    with open(EXPENSES_FILE, 'w') as f:
+        json.dump({"expenses": [], "next_id": 1}, f)
 
 def load_users():
     if os.path.exists(USERS_FILE):
@@ -121,6 +129,16 @@ def save_deleted_todos(deleted_todos):
     with open(DELETED_TODOS_FILE, 'w') as f:
         json.dump(deleted_todos, f, indent=4)
 
+def load_expenses():
+    if os.path.exists(EXPENSES_FILE):
+        with open(EXPENSES_FILE, 'r') as f:
+            return json.load(f)
+    return {"expenses": [], "next_id": 1}
+
+def save_expenses(data):
+    with open(EXPENSES_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
 def cleanup_old_deleted_todos():
     """Remove deleted todos that are older than 15 days"""
     deleted_todos = load_deleted_todos()
@@ -143,9 +161,14 @@ def cleanup_old_deleted_todos():
 
 @app.route('/')
 def index():
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
+    if 'user_id' in session or current_user.is_authenticated:
+        return redirect(url_for('expenses'))
     return redirect(url_for('login'))
+
+@app.route('/expenses')
+@login_required
+def expenses():
+    return render_template('expenses.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -329,38 +352,163 @@ def dashboard():
     user_todos = todos.get(str(current_user.id), [])
     return render_template('dashboard.html', todos=user_todos)
 
+@app.route('/add_expense', methods=['POST'])
+@login_required
+def add_expense():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    # Get form data
+    amount = request.form.get('amount', type=float)
+    category = request.form.get('category')
+    description = request.form.get('description', '')
+    date = request.form.get('date')
+    
+    # Validate required fields
+    if not amount or amount <= 0:
+        return jsonify({"error": "Please enter a valid amount"}), 400
+    if not category:
+        return jsonify({"error": "Please select a category"}), 400
+    if not date:
+        return jsonify({"error": "Please select a date"}), 400
+    
+    # Load existing expenses
+    data = load_expenses()
+    user_email = current_user.email
+    
+    # Create new expense
+    new_expense = {
+        "id": data["next_id"],
+        "user_email": user_email,
+        "amount": float(amount),
+        "category": category,
+        "description": description,
+        "date": date,
+        "created_at": datetime.now().isoformat()
+    }
+    
+    # Add to expenses list and increment next_id
+    data["expenses"].append(new_expense)
+    data["next_id"] += 1
+    
+    # Save expenses
+    save_expenses(data)
+    
+    return jsonify({"message": "Expense added successfully", "expense": new_expense})
+
+@app.route('/get_expenses')
+@login_required
+def get_expenses():
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        # Get filter parameters
+        category = request.args.get('category', '').lower()
+        
+        # Load expenses
+        data = load_expenses()
+        user_email = current_user.email
+        
+        # Initialize expenses list if it doesn't exist
+        if "expenses" not in data:
+            data["expenses"] = []
+        
+        # Filter expenses by user and optionally by category
+        user_expenses = [
+            exp for exp in data["expenses"]
+            if exp.get("user_email") == user_email and 
+            (not category or exp.get("category") == category)
+        ]
+        
+        # Calculate total
+        total = sum(float(exp.get("amount", 0)) for exp in user_expenses)
+        
+        # Sort by date (newest first)
+        user_expenses.sort(key=lambda x: x.get("date", ""), reverse=True)
+        
+        response_data = {
+            "expenses": user_expenses,
+            "total": total,
+            "status": "success"
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        app.logger.error(f"Error in get_expenses: {str(e)}")
+        return jsonify({"error": str(e), "status": "error"}), 500
+
+@app.route('/delete_expense/<int:expense_id>', methods=['DELETE'])
+@login_required
+def delete_expense(expense_id):
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    # Load expenses
+    data = load_expenses()
+    user_email = current_user.email
+    
+    # Find and remove the expense
+    initial_count = len(data["expenses"])
+    data["expenses"] = [
+        exp for exp in data["expenses"]
+        if not (exp["id"] == expense_id and exp["user_email"] == user_email)
+    ]
+    
+    # Check if expense was found and removed
+    if len(data["expenses"]) == initial_count:
+        return jsonify({"error": "Expense not found or unauthorized"}), 404
+    
+    # Save updated expenses
+    save_expenses(data)
+    
+    return jsonify({"message": "Expense deleted successfully"})
+
 @app.route('/add_todo', methods=['POST'])
 @login_required
 def add_todo():
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Not authenticated"}), 401
+        
+    # Get form data
     title = request.form.get('title')
     description = request.form.get('description', '')
     due_date = request.form.get('due_date')
     
+    # Validate required fields
     if not title or not due_date:
-        return jsonify({'error': 'Title and due date are required'}), 400
+        return jsonify({"error": "Title and due date are required"}), 400
     
+    # Load existing todos
     todos = load_todos()
-    user_todos = todos.get(str(current_user.id), [])
+    user_email = current_user.email
     
+    # Create new todo
     new_todo = {
-        'id': len(user_todos) + 1,
-        'title': title,
-        'description': description,
-        'due_date': due_date,
-        'completed': False,
-        'created_at': datetime.now().isoformat()
+        "id": len(todos.get(user_email, [])) + 1,
+        "title": title,
+        "description": description,
+        "due_date": due_date,
+        "completed": False,
+        "created_at": datetime.now().isoformat()
     }
     
-    user_todos.append(new_todo)
-    todos[str(current_user.id)] = user_todos
+    # Add to user's todos
+    if user_email not in todos:
+        todos[user_email] = []
+    todos[user_email].append(new_todo)
+    
+    # Save todos
     save_todos(todos)
     
-    return jsonify({'success': True, 'todo': new_todo})
+    return jsonify({"message": "Todo added successfully", "todo": new_todo})
 
 @app.route('/delete_todo/<int:todo_id>', methods=['DELETE'])
 @login_required
 def delete_todo(todo_id):
     todos = load_todos()
+    # ... (rest of the code remains the same)
     deleted_todos = load_deleted_todos()
     
     user_todos = todos.get(str(current_user.id), [])

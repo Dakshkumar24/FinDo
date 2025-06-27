@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+
+{% block title %}Expense Tracker - Todo App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8 mx-auto text-center">
+            <h1 class="mb-4">
+                <i class="bi bi-cash-coin me-2"></i>Expense Tracker
+            </h1>
+            <p class="lead">Track your daily expenses and manage your budget effectively</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Add Expense Form -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Add New Expense</h5>
+                </div>
+                <div class="card-body">
+                    <form id="expenseForm">
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Select a category</option>
+                                <option value="food">Food & Dining</option>
+                                <option value="shopping">Shopping</option>
+                                <option value="transportation">Transportation</option>
+                                <option value="housing">Housing</option>
+                                <option value="utilities">Utilities</option>
+                                <option value="entertainment">Entertainment</option>
+                                <option value="health">Health</option>
+                                <option value="education">Education</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description (Optional)</label>
+                            <input type="text" class="form-control" id="description" name="description">
+                        </div>
+                        <div class="mb-3">
+                            <label for="date" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="date" name="date" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-circle me-2"></i>Add Expense
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense List -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Expenses</h5>
+                    <div>
+                        <select class="form-select form-select-sm" id="filterCategory" style="width: auto; display: inline-block;">
+                            <option value="">All Categories</option>
+                            <option value="food">Food & Dining</option>
+                            <option value="shopping">Shopping</option>
+                            <option value="transportation">Transportation</option>
+                            <option value="housing">Housing</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="health">Health</option>
+                            <option value="education">Education</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseList">
+                                <!-- Expenses will be loaded here via JavaScript -->
+                                <tr>
+                                    <td colspan="5" class="text-center">No expenses recorded yet. Add your first expense!</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-primary fw-bold">
+                                    <td colspan="3">Total</td>
+                                    <td class="text-end" id="totalAmount">$0.00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteExpenseModal" tabindex="-1" aria-labelledby="deleteExpenseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteExpenseModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this expense? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Global variables
+let filterCategory;
+
+// Function to initialize the page
+function initExpensesPage() {
+    // Initialize date field with today's date
+    const dateField = document.getElementById('date');
+    if (dateField) {
+        dateField.valueAsDate = new Date();
+    }
+    
+    // Get references to elements
+    filterCategory = document.getElementById('filterCategory');
+    const expenseForm = document.getElementById('expenseForm');
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Initial load of expenses
+    loadExpenses();
+}
+
+// Set up all event listeners
+function setupEventListeners() {
+    // Handle form submission
+    const expenseForm = document.getElementById('expenseForm');
+    if (expenseForm) {
+        expenseForm.addEventListener('submit', handleExpenseSubmit);
+    }
+    
+    // Handle category filter change
+    if (filterCategory) {
+        filterCategory.addEventListener('change', loadExpenses);
+    }
+    
+    // Delete expense button click handler (delegated to the document)
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-expense-btn')) {
+            const button = e.target.closest('.delete-expense-btn');
+            const expenseId = button.dataset.expenseId;
+            showDeleteConfirmation(expenseId);
+        }
+    });
+}
+
+// Handle expense form submission
+async function handleExpenseSubmit(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    // Show loading state
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...';
+    
+    try {
+        const response = await fetch('/add_expense', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(formData).toString()
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            // Reset form
+            form.reset();
+            const dateField = document.getElementById('date');
+            if (dateField) dateField.valueAsDate = new Date();
+            
+            showAlert('Expense added successfully!', 'success');
+            loadExpenses();
+        } else {
+            throw new Error(result.error || 'Failed to add expense');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert(error.message || 'An error occurred. Please try again.', 'danger');
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+    }
+}
+
+// Show delete confirmation modal
+function showDeleteConfirmation(expenseId) {
+    const confirmBtn = document.getElementById('confirmDelete');
+    if (!confirmBtn) return;
+    
+    // Remove any existing click handlers
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    // Add new click handler
+    newConfirmBtn.onclick = async function() {
+        await deleteExpense(expenseId);
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteExpenseModal'));
+        if (modal) modal.hide();
+    };
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteExpenseModal'));
+    modal.show();
+}
+
+// Load expenses from the server
+async function loadExpenses() {
+    const category = filterCategory ? filterCategory.value : '';
+    const expenseList = document.getElementById('expenseList');
+    const totalAmountElement = document.getElementById('totalAmount');
+    
+    if (!expenseList) return;
+    
+    try {
+        // Show loading state
+        expenseList.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </td>
+            </tr>`;
+        
+        // Fetch expenses from the server
+        const response = await fetch(`/get_expenses?category=${encodeURIComponent(category)}`);
+        const data = await response.json();
+        
+        console.log('Expenses API Response:', data);
+        
+        if (response.ok && (data.status === 'success' || data.expenses)) {
+            updateExpenseList(data);
+            if (totalAmountElement && typeof data.total !== 'undefined') {
+                totalAmountElement.textContent = `$${parseFloat(data.total).toFixed(2)}`;
+            }
+        } else {
+            throw new Error(data.error || 'Failed to load expenses');
+        }
+    } catch (error) {
+        console.error('Error loading expenses:', error);
+        showError('Error loading expenses. Please try again.');
+    }
+}
+
+// Update the expense list in the DOM
+function updateExpenseList(data) {
+    const expenseList = document.getElementById('expenseList');
+    if (!expenseList) return;
+    
+    if (!data.expenses || data.expenses.length === 0) {
+        expenseList.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center">No expenses found. Add your first expense!</td>
+            </tr>`;
+        return;
+    }
+    
+    // Clear the table
+    expenseList.innerHTML = '';
+    
+    // Add each expense to the table
+    data.expenses.forEach(expense => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${new Date(expense.date).toLocaleDateString()}</td>
+            <td>${expense.description || '-'}</td>
+            <td>
+                <span class="badge bg-${getCategoryBadgeClass(expense.category)}">
+                    ${formatCategory(expense.category)}
+                </span>
+            </td>
+            <td class="text-end">$${parseFloat(expense.amount).toFixed(2)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-danger delete-expense-btn" 
+                        data-expense-id="${expense.id}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+        expenseList.appendChild(row);
+    });
+}
+
+// Show error message
+function showError(message) {
+    const expenseList = document.getElementById('expenseList');
+    if (expenseList) {
+        expenseList.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-danger">
+                    ${message}
+                </td>
+            </tr>`;
+    }
+    showAlert(message, 'danger');
+}
+
+// Delete an expense
+async function deleteExpense(expenseId) {
+    try {
+        const response = await fetch(`/delete_expense/${expenseId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('Expense deleted successfully!', 'success');
+            loadExpenses();
+        } else {
+            throw new Error(result.error || 'Failed to delete expense');
+        }
+    } catch (error) {
+        console.error('Error deleting expense:', error);
+        showAlert(error.message || 'An error occurred while deleting the expense.', 'danger');
+    }
+}
+
+// Helper function to format category for display
+function formatCategory(category) {
+    const categoryMap = {
+        'food': 'Food & Dining',
+        'shopping': 'Shopping',
+        'transportation': 'Transportation',
+        'housing': 'Housing',
+        'utilities': 'Utilities',
+        'entertainment': 'Entertainment',
+        'health': 'Health',
+        'education': 'Education',
+        'other': 'Other'
+    };
+    return categoryMap[category] || (category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Other');
+}
+
+// Helper function to get badge class based on category
+function getCategoryBadgeClass(category) {
+    const categoryClasses = {
+        'food': 'success',
+        'shopping': 'primary',
+        'transportation': 'info',
+        'housing': 'warning',
+        'utilities': 'secondary',
+        'entertainment': 'danger',
+        'health': 'danger',
+        'education': 'info',
+        'other': 'dark'
+    };
+    return categoryClasses[category] || 'secondary';
+}
+
+// Helper function to show alerts
+function showAlert(message, type = 'info') {
+    // Remove any existing alerts
+    const existingAlerts = document.querySelectorAll('.alert-dismissible');
+    existingAlerts.forEach(alert => {
+        const bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+    });
+    
+    // Create new alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.role = 'alert';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Add to the page
+    const container = document.querySelector('.container');
+    if (container) {
+        // Insert the alert after the first row
+        const firstRow = container.querySelector('.row:first-child');
+        if (firstRow) {
+            firstRow.insertAdjacentElement('afterend', alertDiv);
+        } else {
+            container.prepend(alertDiv);
+        }
+        
+        // Auto-remove alert after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                const bsAlert = new bootstrap.Alert(alertDiv);
+                bsAlert.close();
+            }
+        }, 5000);
+    }
+}
+
+// Initialize the page when the DOM is fully loaded
+document.addEventListener('DOMContentLoaded', initExpensesPage);
+</script>
+{% endblock %}

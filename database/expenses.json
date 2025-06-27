@@ -1,0 +1,77 @@
+{
+    "expenses": [
+        {
+            "id": 2,
+            "user_email": "dakshkumar19860@gmail.com",
+            "amount": 650.0,
+            "category": "housing",
+            "description": "June's rent",
+            "date": "2025-06-27",
+            "created_at": "2025-06-27T12:31:38.665330"
+        },
+        {
+            "id": 3,
+            "user_email": "dakshkumar19860@gmail.com",
+            "amount": 700.0,
+            "category": "health",
+            "description": "health insurance",
+            "date": "2025-06-11",
+            "created_at": "2025-06-27T12:32:27.839351"
+        },
+        {
+            "id": 4,
+            "user_email": "dakshkumar19860@gmail.com",
+            "amount": 900.0,
+            "category": "entertainment",
+            "description": "monthly entertainment subscriptions.",
+            "date": "2025-06-28",
+            "created_at": "2025-06-27T12:33:05.411741"
+        },
+        {
+            "id": 6,
+            "user_email": "dakshkumar19860@gmail.com",
+            "amount": 65.0,
+            "category": "food",
+            "description": "",
+            "date": "2025-06-27",
+            "created_at": "2025-06-27T12:39:46.991438"
+        },
+        {
+            "id": 7,
+            "user_email": "dakshkumar19860@gmail.com",
+            "amount": 45.0,
+            "category": "other",
+            "description": "",
+            "date": "2025-06-27",
+            "created_at": "2025-06-27T12:40:11.872006"
+        },
+        {
+            "id": 8,
+            "user_email": "dakshkumar19860@gmail.com",
+            "amount": 43.0,
+            "category": "other",
+            "description": "",
+            "date": "2025-06-27",
+            "created_at": "2025-06-27T12:40:34.437495"
+        },
+        {
+            "id": 9,
+            "user_email": "dakshkumar19860@gmail.com",
+            "amount": 54.0,
+            "category": "food",
+            "description": "",
+            "date": "2025-06-27",
+            "created_at": "2025-06-27T12:44:39.556891"
+        },
+        {
+            "id": 10,
+            "user_email": "dakshkumar19860@gmail.com",
+            "amount": 76.0,
+            "category": "other",
+            "description": "",
+            "date": "2025-06-27",
+            "created_at": "2025-06-27T12:45:35.583084"
+        }
+    ],
+    "next_id": 11
+}
