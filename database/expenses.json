@@ -71,7 +71,16 @@
             "description": "",
             "date": "2025-06-27",
             "created_at": "2025-06-27T12:45:35.583084"
+        },
+        {
+            "id": 11,
+            "user_email": "divak.m14@gmail.com",
+            "amount": 44.0,
+            "category": "food",
+            "description": "",
+            "date": "2025-06-27",
+            "created_at": "2025-06-27T13:16:43.844256"
         }
     ],
-    "next_id": 11
+    "next_id": 12
 }
