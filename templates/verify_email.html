@@ -1,32 +1,70 @@
 {% extends "base.html" %}
 
-{% block title %}Verify Email - Todo App{% endblock %}
+{% block title %}Verify Email - FinDo{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
+    <div class="col-md-6 col-lg-5">
         <div class="card shadow">
-            <div class="card-body">
-                <h2 class="card-title text-center mb-4">Verify Your Email</h2>
-                <p class="text-center mb-4">We've sent a verification code to <strong>{{ email }}</strong></p>
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <h2 class="card-title mb-2">Verify Your Email</h2>
+                    <p class="text-muted">We've sent a verification code to <strong>{{ email if email else 'your email' }}</strong></p>
+                </div>
                 
-                <form method="POST" action="{{ url_for('verify_email') }}">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <form method="POST" action="{{ url_for('verify_email') }}" class="mb-3">
+                    <input type="hidden" name="email" value="{{ email if email else '' }}">
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ email if email else '' }}" required {% if email %}readonly{% endif %}>
+                    </div>
+                    
                     <div class="mb-3">
                         <label for="verification_code" class="form-label">Verification Code</label>
                         <input type="text" class="form-control text-center" id="verification_code" 
                                name="verification_code" required autocomplete="off" maxlength="6" 
-                               pattern="\d{6}" title="Please enter the 6-digit code">
+                               pattern="\d{6}" title="Please enter the 6-digit code"
+                               style="font-size: 1.25rem; letter-spacing: 0.5em; padding-left: 0.5em;">
                         <div class="form-text">Enter the 6-digit code sent to your email</div>
                     </div>
                     
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">Verify Email</button>
-                        <a href="{{ url_for('register') }}" class="btn btn-outline-secondary">Back to Register</a>
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-check-circle me-2"></i>Verify Email
+                        </button>
                     </div>
                 </form>
                 
-                <div class="text-center mt-3">
-                    <p class="mb-0">Didn't receive the code? <a href="{{ url_for('resend_verification') }}">Resend code</a></p>
+                <form method="POST" action="{{ url_for('verify_email') }}">
+                    <input type="hidden" name="email" value="{{ email if email else '' }}">
+                    <input type="hidden" name="resend" value="true">
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-2"></i>Resend Verification Code
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <p class="mb-0">
+                        Didn't receive the code? Check your spam folder or 
+                        <a href="{{ url_for('contact') }}">contact support</a>.
+                    </p>
                 </div>
             </div>
         </div>
@@ -36,14 +74,29 @@
 
 {% block scripts %}
 <script>
-// Auto-submit when all digits are entered
-const codeInput = document.getElementById('verification_code');
-if (codeInput) {
-    codeInput.addEventListener('input', function(e) {
-        if (this.value.length === 6) {
-            this.form.submit();
-        }
-    });
-}
+// Auto-focus the code input when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const codeInput = document.getElementById('verification_code');
+    if (codeInput) {
+        codeInput.focus();
+        
+        // Auto-submit when all digits are entered
+        codeInput.addEventListener('input', function(e) {
+            // Only allow numeric input
+            this.value = this.value.replace(/[^0-9]/g, '');
+            
+            // Auto-submit when 6 digits are entered
+            if (this.value.length === 6) {
+                this.form.submit();
+            }
+        });
+    }
+    
+    // Auto-submit email field if it's pre-filled and user is coming from registration
+    const emailField = document.getElementById('email');
+    if (emailField && emailField.value && !emailField.readOnly) {
+        emailField.form.submit();
+    }
+});
 </script>
 {% endblock %}

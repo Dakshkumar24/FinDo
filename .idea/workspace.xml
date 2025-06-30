@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a1fe95fc-db23-46e8-b387-b42dc4559458" name="Changes" comment="" />
+    <list default="true" id="a1fe95fc-db23-46e8-b387-b42dc4559458" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/expenses.json" beforeDir="false" afterPath="$PROJECT_DIR$/database/expenses.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/flask_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/verify_email.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/verify_email.html" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -165,6 +170,9 @@
       <workItem from="1751051990254" duration="19000" />
       <workItem from="1751052019647" duration="2173000" />
       <workItem from="1751054700947" duration="46000" />
+      <workItem from="1751091027523" duration="19000" />
+      <workItem from="1751091049133" duration="3896000" />
+      <workItem from="1751138289786" duration="1000000" />
     </task>
     <servers />
   </component>

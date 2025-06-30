@@ -23,9 +23,14 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Ch
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
-app.config['MAIL_USERNAME'] = 'dakshkumar19860@gmail.com'  # Using the email directly for now
-app.config['MAIL_PASSWORD'] = 'jpud hbik syny jsnn'  # Using the app password directly for now
-app.config['MAIL_DEFAULT_SENDER'] = 'dakshkumar19860@gmail.com'
+# Email configuration
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', 'your-email@gmail.com')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', 'your-app-password')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'your-email@gmail.com')
+
+# Email settings
+app.config['MAIL_MAX_EMAILS'] = 10
+app.config['MAIL_DEBUG'] = True  # Enable debug output
 
 mail = Mail(app)
 
@@ -42,27 +47,71 @@ def generate_verification_code():
 def send_verification_email(email, code):
     """Send verification email with the code"""
     try:
+        print(f"Attempting to send verification email to {email}")
         msg = MIMEMultipart()
         msg['From'] = app.config['MAIL_DEFAULT_SENDER']
         msg['To'] = email
-        msg['Subject'] = 'Email Verification Code'
+        msg['Subject'] = 'Email Verification Code - FinDo'
+        
+        # Create a verification link
+        verification_url = url_for('verify_email', _external=True)
         
         body = f"""
         <h2>Email Verification</h2>
-        <p>Thank you for registering!</p>
-        <p>Your verification code is: <strong>{code}</strong></p>
+        <p>Thank you for registering with FinDo!</p>
+        <p>Your verification code is: <strong style="font-size: 1.5em; letter-spacing: 2px;">{code}</strong></p>
+        <p>Please enter this code on the verification page to complete your registration.</p>
+        <p>Or click the link below to verify your email:</p>
+        <p><a href="{verification_url}?code={code}&email={email}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px;">Verify My Email</a></p>
         <p>This code will expire in 10 minutes.</p>
+        <p>If you did not request this, please ignore this email.</p>
+        <p>Best regards,<br>FinDo Team</p>
         """
         
         msg.attach(MIMEText(body, 'html'))
         
+        # Print debug info (remove in production)
+        print(f"SMTP Server: {app.config['MAIL_SERVER']}:{app.config['MAIL_PORT']}")
+        print(f"Using TLS: {app.config['MAIL_USE_TLS']}")
+        print(f"From: {app.config['MAIL_DEFAULT_SENDER']}")
+        
         with smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT']) as server:
-            server.starttls()
-            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+            server.set_debuglevel(1)  # Enable debug output
+            server.ehlo()
+            if app.config['MAIL_USE_TLS']:
+                server.starttls()
+                server.ehlo()
+            
+            # Log in to the SMTP server
+            username = app.config['MAIL_USERNAME']
+            password = app.config['MAIL_PASSWORD']
+            print(f"Attempting to login with username: {username}")
+            
+            if username and password:
+                server.login(username, password)
+            
+            # Send the email
             server.send_message(msg)
-        return True
+            print(f"Verification email sent successfully to {email}")
+            return True
+            
+    except smtplib.SMTPAuthenticationError as e:
+        error_msg = f"SMTP Authentication Error: {str(e)}"
+        print(error_msg)
+        app.logger.error(error_msg)
+        flash("Failed to send verification email: Authentication error. Please check your email configuration.", 'danger')
+        return False
+    except smtplib.SMTPException as e:
+        error_msg = f"SMTP Error: {str(e)}"
+        print(error_msg)
+        app.logger.error(error_msg)
+        flash("Failed to send verification email. Please try again later.", 'danger')
+        return False
     except Exception as e:
-        print(f"Error sending email: {e}")
+        error_msg = f"Error sending email to {email}: {str(e)}"
+        print(error_msg)
+        app.logger.error(error_msg)
+        flash("An unexpected error occurred while sending the verification email.", 'danger')
         return False
 
 # Initialize Flask-Login
@@ -159,6 +208,21 @@ def cleanup_old_deleted_todos():
     
     save_deleted_todos(deleted_todos)
 
+@app.route('/test-email')
+def test_email_route():
+    test_recipient = "your-test-email@example.com"  # Change this to your test email
+    try:
+        msg = Message(
+            'Test Email from FinDo',
+            sender=app.config['MAIL_DEFAULT_SENDER'],
+            recipients=[test_recipient]
+        )
+        msg.body = 'This is a test email from your Flask application.'
+        mail.send(msg)
+        return "Test email sent successfully to " + test_recipient
+    except Exception as e:
+        return f"Error sending test email: {str(e)}"
+
 @app.route('/')
 def index():
     if 'user_id' in session or current_user.is_authenticated:
@@ -186,11 +250,8 @@ def login():
                 verification_code = generate_verification_code()
                 verification_codes[email] = {
                     'code': verification_code,
-                    'expires_at': datetime.now() + timedelta(minutes=10)
-                }
-                session['pending_user'] = {
-                    'email': email,
-                    'password': users[email]['password']
+                    'expires_at': datetime.now() + timedelta(minutes=10),
+                    'password': users[email]['password']  # Store hashed password for verification
                 }
                 if send_verification_email(email, verification_code):
                     flash('Your email is not verified. A new verification code has been sent to your email.', 'warning')
@@ -237,7 +298,7 @@ def resend_verification():
     
     return redirect(url_for('verify_email'))
 
-@app.route('/verify_email', methods=['GET', 'POST'])
+@app.route('/verify-email', methods=['GET', 'POST'])
 def verify_email():
     # Check if there's a pending user in the session
     if 'pending_user' not in session:
@@ -293,6 +354,42 @@ def verify_email():
     
     return render_template('verify_email.html', email=email)
 
+@app.route('/verify-email/<token>', methods=['GET'])
+def verify_email_token(token):
+    """Verify email using a token from email verification link"""
+    try:
+        email = None
+        # Find which email this token belongs to
+        for user_email, data in verification_codes.items():
+            if 'token' in data and data['token'] == token:
+                if datetime.now() < data.get('expires_at', datetime.min):
+                    email = user_email
+                    break
+        
+        if not email:
+            flash('Invalid or expired verification link.', 'danger')
+            return redirect(url_for('login'))
+            
+        # Update user as verified
+        users = load_users()
+        if email in users:
+            users[email]['verified'] = True
+            save_users(users)
+            
+            # Clean up
+            if email in verification_codes:
+                del verification_codes[email]
+                
+            flash('Email verified successfully! You can now log in.', 'success')
+        else:
+            flash('User not found. Please register again.', 'danger')
+            
+    except Exception as e:
+        print(f"Error verifying email: {e}")
+        flash('An error occurred while verifying your email. Please try again.', 'danger')
+    
+    return redirect(url_for('login'))
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -310,10 +407,17 @@ def register():
         if password != confirm_password:
             flash('Passwords do not match', 'danger')
             return redirect(url_for('register'))
+            
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long', 'danger')
+            return redirect(url_for('register'))
         
         users = load_users()
-        if email in users and users[email].get('verified', False):
-            flash('Email already registered. Please log in.', 'info')
+        if email in users:
+            if users[email].get('verified', False):
+                flash('Email already registered. Please log in.', 'info')
+            else:
+                flash('This email is registered but not verified. Please check your email for the verification code.', 'warning')
             return redirect(url_for('login'))
         
         try:
@@ -321,7 +425,8 @@ def register():
             verification_code = generate_verification_code()
             verification_codes[email] = {
                 'code': verification_code,
-                'expires_at': datetime.now() + timedelta(minutes=10)
+                'expires_at': datetime.now() + timedelta(minutes=10),
+                'password': generate_password_hash(password)  # Store hashed password for later
             }
             
             # Send verification email
@@ -335,15 +440,32 @@ def register():
                 'password': generate_password_hash(password)
             }
             
-            flash('Verification code sent to your email. Please check your inbox.', 'success')
+            flash('Verification code sent to your email. Please check your inbox (and spam folder).', 'success')
             return redirect(url_for('verify_email'))
             
         except Exception as e:
-            print(f"Error during registration: {e}")
-            flash('An error occurred during registration. Please try again.', 'danger')
+            app.logger.error(f"Error during registration for {email}: {str(e)}")
+            flash('An error occurred during registration. Please try again later.', 'danger')
             return redirect(url_for('register'))
     
     return render_template('register.html')
+
+@app.route('/test_email')
+def test_email():
+    """Test email sending functionality"""
+    test_email = 'test@example.com'  # Replace with your test email
+    test_code = generate_verification_code()
+    
+    if send_verification_email(test_email, test_code):
+        return jsonify({
+            'status': 'success',
+            'message': f'Test email sent to {test_email} with code: {test_code}'
+        })
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to send test email. Check server logs for details.'
+        }), 500
 
 @app.route('/dashboard')
 @login_required
@@ -657,9 +779,154 @@ def toggle_todo(todo_id):
     
     return jsonify({'success': True, 'completed': todo_to_update['completed']})
 
-@app.route('/forgot_password')
+# Password reset tokens storage (in production, use a database like Redis)
+password_reset_tokens = {}
+
+def generate_reset_token():
+    """Generate a secure random token for password reset"""
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+
+@app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email').strip()
+        
+        if not email:
+            flash('Email is required', 'danger')
+            return render_template('forgot_password.html', email=email)
+        
+        users = load_users()
+        if email not in users:
+            # For security, don't reveal if the email exists or not
+            flash('If your email is registered, you will receive a password reset link', 'info')
+            return redirect(url_for('login'))
+        
+        # Generate reset token
+        reset_token = generate_reset_token()
+        reset_url = url_for('reset_password', token=reset_token, _external=True)
+        
+        # Store token with expiration (1 hour)
+        password_reset_tokens[email] = {
+            'token': reset_token,
+            'expires_at': datetime.now() + timedelta(hours=1)
+        }
+        
+        # Send reset email
+        try:
+            print(f"Attempting to send password reset email to {email}")
+            msg = MIMEMultipart()
+            msg['From'] = app.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = email
+            msg['Subject'] = 'Password Reset Request - FinDo'
+            
+            body = f"""
+            <h2>Password Reset Request</h2>
+            <p>You requested to reset your password for your FinDo account.</p>
+            <p>Click the button below to set a new password:</p>
+            <p style="margin: 25px 0;">
+                <a href="{reset_url}" style="display: inline-block; padding: 12px 25px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                    Reset My Password
+                </a>
+            </p>
+            <p>Or copy and paste this URL into your browser:</p>
+            <p style="word-break: break-all;">{reset_url}</p>
+            <p>This link will expire in 1 hour.</p>
+            <p style="color: #666; font-size: 0.9em;">
+                If you didn't request this, you can safely ignore this email. Your password will remain unchanged.
+            </p>
+            <p>Best regards,<br>FinDo Team</p>
+            """
+            
+            msg.attach(MIMEText(body, 'html'))
+            
+            with smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT']) as server:
+                server.set_debuglevel(1)  # Enable debug output
+                server.ehlo()
+                if app.config['MAIL_USE_TLS']:
+                    server.starttls()
+                    server.ehlo()
+                
+                username = app.config['MAIL_USERNAME']
+                password = app.config['MAIL_PASSWORD']
+                print(f"Attempting to login with username: {username}")
+                
+                if username and password:
+                    server.login(username, password)
+                
+                server.send_message(msg)
+            
+            print(f"Password reset email sent successfully to {email}")
+            flash('If your email is registered, you will receive a password reset link', 'info')
+            return redirect(url_for('login'))
+            
+        except smtplib.SMTPAuthenticationError as e:
+            error_msg = f"SMTP Authentication Error while sending password reset: {str(e)}"
+            print(error_msg)
+            app.logger.error(error_msg)
+            flash('Failed to send password reset email due to authentication error. Please contact support.', 'danger')
+        except smtplib.SMTPException as e:
+            error_msg = f"SMTP Error while sending password reset: {str(e)}"
+            print(error_msg)
+            app.logger.error(error_msg)
+            flash('Failed to send password reset email. Please try again later.', 'danger')
+        except Exception as e:
+            error_msg = f"Error sending password reset email to {email}: {str(e)}"
+            print(error_msg)
+            app.logger.error(error_msg)
+            flash('An unexpected error occurred. Please try again later.', 'danger')
+        
+        return render_template('forgot_password.html', email=email)
+    
     return render_template('forgot_password.html')
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    # Find the email associated with this token
+    email = None
+    for user_email, token_data in password_reset_tokens.items():
+        if token_data['token'] == token and token_data['expires_at'] > datetime.now():
+            email = user_email
+            break
+    
+    if not email:
+        flash('Invalid or expired reset token', 'danger')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if not password or not confirm_password:
+            flash('Both password fields are required', 'danger')
+            return redirect(request.url)
+            
+        if password != confirm_password:
+            flash('Passwords do not match', 'danger')
+            return redirect(request.url)
+            
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long', 'danger')
+            return redirect(request.url)
+        
+        # Update the user's password
+        users = load_users()
+        if email in users:
+            users[email]['password'] = generate_password_hash(password)
+            save_users(users)
+            
+            # Remove the used token
+            if email in password_reset_tokens:
+                del password_reset_tokens[email]
+            
+            flash('Your password has been reset successfully. Please log in with your new password.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('User not found', 'danger')
+            return redirect(url_for('forgot_password'))
+    
+    return render_template('reset_password.html', token=token)
+
+
 
 @app.route('/logout')
 @login_required
