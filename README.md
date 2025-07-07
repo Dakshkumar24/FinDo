@@ -1,8 +1,6 @@
 # FinDo - Personal Finance & Task Manager
 
-A secure, responsive web application for managing your personal finances and tasks, built with Python Flask. Features expense tracking, to-do list management, user registration, and secure login. The application uses Bootstrap 5 for a clean, modern interface.
-
-![FinDo App Screenshot](https://via.placeholder.com/800x500.png?text=FinDo+App+Screenshot)
+A secure, responsive web application for managing your finances and tasks, built with Python Flask. Features expense tracking, to-do list management, user registration, and secure login. The application utilizes Bootstrap 5 for a clean and modern interface.
 
 ## ✨ Features
 
@@ -83,13 +81,8 @@ A secure, responsive web application for managing your personal finances and tas
 - **Database errors**: Make sure the `database` directory exists and is writable
 - **Module not found**: Run `pip install -r requirements.txt`
 
-## 📝 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+![image](https://github.com/user-attachments/assets/e1818478-1473-4f79-867d-1dee646f2215)
 
-## 🙏 Acknowledgments
-- Flask Team for the amazing web framework
-- Bootstrap for the responsive design
-- All open-source contributors
 
 ## 📬 Contact
 Have questions or suggestions? Feel free to open an issue or submit a pull request.
