@@ -1,30 +1,28 @@
-# Web-Based Todo List Application
+# FinDo - Personal Finance & Task Manager
 
-A secure, responsive web application for managing your tasks, built with Python Flask. Features user registration with email verification, secure login, and full CRUD operations for tasks. The application uses Bootstrap 5 for a clean, modern interface and includes email verification for enhanced security.
+A secure, responsive web application for managing your personal finances and tasks, built with Python Flask. Features expense tracking, to-do list management, user registration, and secure login. The application uses Bootstrap 5 for a clean, modern interface.
 
-![Todo App Screenshot](https://via.placeholder.com/800x500.png?text=Todo+App+Screenshot)
+![FinDo App Screenshot](https://via.placeholder.com/800x500.png?text=FinDo+App+Screenshot)
 
 ## ✨ Features
 
 ### 🔐 User Authentication
-- **Secure Registration** with email verification
+- **Secure Registration** with password hashing
 - **Login/Logout** functionality with session management
 - **Password Hashing** for security
-- **Email Verification** with expiring verification codes
 
-### 📝 Task Management
-- **Create** new tasks with title, description, and due date
-- **Read** all your tasks in a clean, organized view
-- **Update** task details or mark as complete
-- **Delete** tasks you no longer need
-- **Responsive Design** works on desktop and mobile devices
+### 📝 Task & Expense Management
+- **Track Expenses**: Log and categorize your daily expenses
+- **Set Budgets**: Monitor your spending against budgets
+- **Task Management**: Create and manage to-do items with due dates
+- **Dashboard**: View your financial overview and upcoming tasks
+- **Responsive Design**: Works on desktop and mobile devices
 
 ### 🛠️ Technical Features
 - **Flask** web framework
 - **SQLite** database (via SQLAlchemy)
 - **Bootstrap 5** for responsive design
 - **Flask-Login** for session management
-- **Email verification** with SMTP
 - **CSRF Protection** for form security
 
 ## 🚀 Getting Started
@@ -63,13 +61,7 @@ A secure, responsive web application for managing your tasks, built with Python 
    ```
    FLASK_APP=flask_app.py
    FLASK_ENV=development
-   SECRET_KEY=your-secret-key-here
-   MAIL_SERVER=smtp.gmail.com
-   MAIL_PORT=587
-   MAIL_USE_TLS=True
-   MAIL_USERNAME=your-email@gmail.com
-   MAIL_PASSWORD=your-app-password
-   MAIL_DEFAULT_SENDER=your-email@gmail.com
+   SECRET_KEY=your-secret-key
    ```
 
 5. **Initialize the database**
@@ -85,16 +77,9 @@ A secure, responsive web application for managing your tasks, built with Python 
 7. **Open in your browser**
    Visit `http://127.0.0.1:8000` in your web browser
 
-## 📧 Email Configuration
-For email verification to work, you need to:
-1. Use a Gmail account
-2. Enable "Less secure app access" or create an App Password
-3. Update the `.env` file with your email credentials
-
 ## 🔧 Troubleshooting
 
 ### Common Issues
-- **Email not sending**: Check your Gmail security settings and app password
 - **Database errors**: Make sure the `database` directory exists and is writable
 - **Module not found**: Run `pip install -r requirements.txt`
 

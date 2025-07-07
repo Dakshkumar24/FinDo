@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Todo App{% endblock %}
+{% block title %}Dashboard - FinDo{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>My Todos</h1>
+    <h1>My Tasks</h1>
     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTodoModal">
-        <i class="bi bi-plus-lg"></i> Add Todo
+        <i class="bi bi-plus-lg"></i> Add Task
     </button>
 </div>
 
@@ -39,7 +39,7 @@
     </div>
     {% else %}
     <div class="alert alert-info">
-        No todos found. Click the "Add Todo" button to create one!
+        No tasks found. Click the "Add Task" button to create one!
     </div>
     {% endfor %}
 </div>
@@ -66,7 +66,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addTodoModalLabel">Add New Todo</h5>
+                <h5 class="modal-title" id="addTodoModalLabel">Add New Task</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="addTodoForm">
@@ -102,7 +102,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editTodoModalLabel">Edit Todo</h5>
+                <h5 class="modal-title" id="editTodoModalLabel">Edit Task</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editTodoForm">

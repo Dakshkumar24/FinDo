@@ -55,15 +55,6 @@
             "created_at": "2025-06-27T12:45:35.583084"
         },
         {
-            "id": 11,
-            "user_email": "divak.m14@gmail.com",
-            "amount": 44.0,
-            "category": "food",
-            "description": "",
-            "date": "2025-06-27",
-            "created_at": "2025-06-27T13:16:43.844256"
-        },
-        {
             "id": 12,
             "user_email": "dakshkumar19860@gmail.com",
             "amount": 33004049848.0,
@@ -71,7 +62,25 @@
             "description": "wlnejik",
             "date": "2025-06-28",
             "created_at": "2025-06-28T12:12:21.804278"
+        },
+        {
+            "id": 13,
+            "user_email": "divak.m14@gmail.com",
+            "amount": 323.0,
+            "category": "housing",
+            "description": "divak",
+            "date": "2025-07-09",
+            "created_at": "2025-07-06T22:11:44.784601"
+        },
+        {
+            "id": 14,
+            "user_email": "divak.m14@gmail.com",
+            "amount": 76.0,
+            "category": "food",
+            "description": "Icecream from Target",
+            "date": "2025-07-06",
+            "created_at": "2025-07-06T22:14:00.168592"
         }
     ],
-    "next_id": 13
+    "next_id": 15
 }
