@@ -64,15 +64,6 @@
             "created_at": "2025-06-28T12:12:21.804278"
         },
         {
-            "id": 13,
-            "user_email": "divak.m14@gmail.com",
-            "amount": 323.0,
-            "category": "housing",
-            "description": "divak",
-            "date": "2025-07-09",
-            "created_at": "2025-07-06T22:11:44.784601"
-        },
-        {
             "id": 14,
             "user_email": "divak.m14@gmail.com",
             "amount": 76.0,

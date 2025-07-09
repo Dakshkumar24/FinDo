@@ -41,17 +41,23 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 class User(UserMixin):
-    def __init__(self, id, email, password):
+    def __init__(self, id, email, password, first_name=None):
         self.id = id
         self.email = email
         self.password = password
+        self.first_name = first_name or email.split('@')[0]  # Default to part before @ if no first name
 
 @login_manager.user_loader
 def load_user(user_id):
     users = load_users()
     if user_id in users:
         user_data = users[user_id]
-        return User(user_id, user_id, user_data['password'])
+        return User(
+            id=user_id,
+            email=user_id,
+            password=user_data['password'],
+            first_name=user_data.get('first_name')
+        )
     return None
 
 # Database setup
@@ -132,8 +138,13 @@ def cleanup_old_deleted_todos():
 @app.route('/')
 def index():
     if 'user_id' in session or current_user.is_authenticated:
-        return redirect(url_for('expenses'))
+        return redirect(url_for('welcome'))
     return redirect(url_for('login'))
+
+@app.route('/welcome')
+@login_required
+def welcome():
+    return render_template('welcome.html')
 
 @app.route('/expenses')
 @login_required
@@ -156,7 +167,7 @@ def login():
                 login_user(user)
                 flash('Logged in successfully!', 'success')
                 next_page = request.args.get('next')
-                return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+                return redirect(next_page) if next_page else redirect(url_for('welcome'))
         
         flash('Invalid email or password', 'danger')
     
@@ -191,9 +202,11 @@ def register():
         
         try:
             # Create user account directly without verification
+            first_name = request.form.get('first_name', '').strip()
             users[email] = {
                 'password': generate_password_hash(password),
-                'verified': True
+                'verified': True,
+                'first_name': first_name if first_name else None
             }
             save_users(users)
             

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">Welcome to FinDo, {{ current_user.first_name }}!</h1>
+            <p class="lead mb-5">What would you like to do today?</p>
+            
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <i class="fas fa-tasks fa-4x mb-3 text-primary"></i>
+                            <h3>Tasks</h3>
+                            <p>Manage your daily tasks and to-do lists</p>
+                            <a href="{{ url_for('tasks') }}" class="btn btn-primary btn-lg">Go to Tasks</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <i class="fas fa-money-bill-wave fa-4x mb-3 text-success"></i>
+                            <h3>Expenses</h3>
+                            <p>Track your expenses and manage your budget</p>
+                            <a href="{{ url_for('expenses') }}" class="btn btn-success btn-lg">Go to Expenses</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
