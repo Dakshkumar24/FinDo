@@ -81,8 +81,6 @@ A secure, responsive web application for managing your finances and tasks, built
 - **Database errors**: Make sure the `database` directory exists and is writable
 - **Module not found**: Run `pip install -r requirements.txt`
 
-![image](https://github.com/user-attachments/assets/e1818478-1473-4f79-867d-1dee646f2215)
-
 
 ## 📬 Contact
 Have questions or suggestions? Feel free to open an issue or submit a pull request.
