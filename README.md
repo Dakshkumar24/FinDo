@@ -85,5 +85,3 @@ A secure, responsive web application for managing your finances and tasks, built
 ## 📬 Contact
 Have questions or suggestions? Feel free to open an issue or submit a pull request.
 
----
-Built with ❤️ and Python
